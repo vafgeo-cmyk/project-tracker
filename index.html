@@ -1225,6 +1225,8 @@
         <label class="btn btn-ghost" title="Import a previously exported JSON file" style="cursor:pointer;margin:0">
           ⬆ Import<input type="file" accept=".json" onchange="importData(event)" style="display:none">
         </label>
+        <button class="btn btn-ghost" onclick="adminLogin()">Admin Login</button>
+        <button class="btn btn-ghost" onclick="adminLogout()">Logout</button>
         <button class="btn btn-primary" onclick="openAddModal()">
           <span>＋</span> New Project
         </button>
@@ -1469,6 +1471,48 @@
 </nav>
 
 <script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } 
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+// 🔐 TODO: Replace with your real Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDdDCU32Kv1nDwz5l33tIkQ37W6DznV3sg",
+  authDomain: "gv-project-tracker-3686a.firebaseapp.com",
+  projectId: "gv-project-tracker-3686a",
+  storageBucket: "gv-project-tracker-3686a.firebasestorage.app",
+  messagingSenderId: "449784720463",
+  appId: "1:449784720463:web:027c8e6ff4abb090e98e3a"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+let currentUser = null;
+
+onAuthStateChanged(auth, (user) => {
+  currentUser = user;
+  if (user) {
+    console.log("Logged in as:", user.email);
+  } else {
+    console.log("Not logged in");
+  }
+});
+
+window.adminLogin = function() {
+  const email = prompt("Admin Email:");
+  const password = prompt("Password:");
+  signInWithEmailAndPassword(auth, email, password)
+    .then(() => alert("Logged in successfully"))
+    .catch(err => alert(err.message));
+}
+
+window.adminLogout = function() {
+  signOut(auth);
+  alert("Logged out");
+}
+
 // ── State ──
 let projects = [];
 let currentFilter = 'all';
@@ -1993,6 +2037,10 @@ function clearForm() {
 }
 
 function saveProject() {
+  if (!currentUser) {
+    alert("You must be logged in as admin to edit.");
+    return;
+  }
   const name = document.getElementById('f-name').value.trim();
   if (!name) { showToast('⚠️ Project name is required'); return; }
   const data = {
