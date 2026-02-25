@@ -1468,7 +1468,7 @@
   </div>
 </nav>
 
-<script>
+<script type="module">
 // ── State ──
 let projects = [];
 let currentFilter = 'all';
@@ -1547,7 +1547,7 @@ function renderAll() {
   // Apply auto-status to every project before rendering
   let changed = false;
   projects.forEach(p => { if (applyAutoStatus(p)) changed = true; });
-  if (changed) saveToStorage();
+  // Note: saveToStorage is async — only call explicitly, not here
   updateCounts();
   renderProjects();
   updateSidebarStats();
@@ -2282,38 +2282,77 @@ function dragEnd(event) {
   dragSrcProj = null;
 }
 
-// ── Persistence ──
-const STORAGE_KEY = 'trackr_projects_v1';
-const META_KEY = 'trackr_meta_v1';
+// ── Firebase ──
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-function saveToStorage() {
+const firebaseConfig = {
+  apiKey: "AIzaSyDdDCU32Kv1nDwz5l33tIkQ37W6DznV3sg",
+  authDomain: "gv-project-tracker-3686a.firebaseapp.com",
+  projectId: "gv-project-tracker-3686a",
+  storageBucket: "gv-project-tracker-3686a.firebasestorage.app",
+  messagingSenderId: "449784720463",
+  appId: "1:449784720463:web:027c8e6ff4abb090e98e3a"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+const DATA_DOC = doc(db, 'tracker', 'data');
+
+// Flag to prevent save loops when we receive our own updates
+let isSyncing = false;
+
+async function saveToStorage() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
-    localStorage.setItem(META_KEY, JSON.stringify({ nextId, savedAt: new Date().toISOString() }));
+    isSyncing = true;
+    await setDoc(DATA_DOC, {
+      projects: JSON.parse(JSON.stringify(projects)), // deep clone to strip undefined
+      nextId,
+      savedAt: new Date().toISOString()
+    });
     flashSaved();
   } catch(e) {
-    console.warn('Storage save failed:', e);
+    console.warn('Firebase save failed:', e);
+    showToast('⚠️ Save failed — check connection');
+  } finally {
+    isSyncing = false;
   }
 }
 
-function loadFromStorage() {
+async function loadFromStorage() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const meta = localStorage.getItem(META_KEY);
-    if (raw) {
-      projects = JSON.parse(raw);
-      if (meta) {
-        const m = JSON.parse(meta);
-        nextId = m.nextId || (Math.max(...projects.map(p=>p.id), 0) + 1);
-      } else {
-        nextId = Math.max(...projects.map(p=>p.id), 0) + 1;
-      }
+    const snap = await getDoc(DATA_DOC);
+    if (snap.exists()) {
+      const d = snap.data();
+      projects = d.projects || [];
+      nextId = d.nextId || (Math.max(...projects.map(p=>p.id), 0) + 1);
       return true;
     }
   } catch(e) {
-    console.warn('Storage load failed:', e);
+    console.warn('Firebase load failed:', e);
   }
   return false;
+}
+
+// Real-time listener — updates all open tabs/devices instantly
+function startRealtimeSync() {
+  onSnapshot(DATA_DOC, (snap) => {
+    if (isSyncing) return; // skip if we triggered this save ourselves
+    if (snap.exists()) {
+      const d = snap.data();
+      const incoming = d.projects || [];
+      // Only re-render if data actually changed
+      if (JSON.stringify(incoming) !== JSON.stringify(projects)) {
+        projects = incoming;
+        nextId = d.nextId || (Math.max(...projects.map(p=>p.id), 0) + 1);
+        migrationFixes();
+        renderAll();
+        showToast('🔄 Synced from another device');
+      }
+    }
+  }, (err) => {
+    console.warn('Realtime sync error:', err);
+  });
 }
 
 function flashSaved() {
@@ -2461,37 +2500,70 @@ saveNotes = function(projId) {
   if (el) { p.notes = el.value; saveToStorage(); updateSidebarStats(); }
 };
 
-// ── Boot ──
-const hasStored = loadFromStorage();
-if (!hasStored) {
-  // Load seed data only on first ever visit
-  seed.forEach(s => {
-    const manualStatuses = ['on-hold', 'at-risk'];
-    const override = manualStatuses.includes(s.status) ? s.status : null;
-    projects.push({ id: nextId++, ...s, statusOverride: override });
+// ── Migration helper (reusable) ──
+function migrationFixes() {
+  projects.forEach(p => {
+    if (p.statusOverride === undefined) p.statusOverride = ['on-hold','at-risk'].includes(p.status) ? p.status : null;
+    if (!p.status) p.status = 'not-started';
+    if (!p.owners) p.owners = p.owner ? [p.owner] : [];
+    if (!p.tasks) p.tasks = [];
   });
-  saveToStorage();
 }
-// Migrate any stored projects — fix missing fields from older exports
-projects.forEach(p => {
-  // Fix missing statusOverride
-  if (p.statusOverride === undefined) {
-    p.statusOverride = ['on-hold','at-risk'].includes(p.status) ? p.status : null;
+
+// ── Expose functions globally (required for type="module") ──
+window.openAddModal = openAddModal;
+window.openEditModal = openEditModal;
+window.closeModal = closeModal;
+window.handleModalClick = handleModalClick;
+window.saveProject = saveProject;
+window.deleteProject = deleteProject;
+window.openDetail = openDetail;
+window.closeDetail = closeDetail;
+window.toggleTask = toggleTask;
+window.deleteTask = deleteTask;
+window.addTask = addTask;
+window.saveNotes = saveNotes;
+window.switchView = switchView;
+window.showWeeklyView = showWeeklyView;
+window.filterStatus = filterStatus;
+window.handleSearch = handleSearch;
+window.exportData = exportData;
+window.importData = importData;
+window.calNav = calNav;
+window.goToday = goToday;
+window.handleOwnerKey = handleOwnerKey;
+window.removeOwner = removeOwner;
+window.dragStart = dragStart;
+window.dragOver = dragOver;
+window.dragLeave = dragLeave;
+window.dragDrop = dragDrop;
+window.dragEnd = dragEnd;
+window.setMobileNav = setMobileNav;
+
+// ── Boot ──
+async function boot() {
+  // Show loading state
+  document.getElementById('project-tbody').innerHTML = `
+    <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text3)">
+      <div style="font-size:24px;margin-bottom:8px">⏳</div>
+      <div>Connecting to database…</div>
+    </td></tr>`;
+
+  const hasStored = await loadFromStorage();
+
+  if (!hasStored) {
+    // First ever load — no data in Firebase yet, start empty (no seed data)
+    projects = [];
+    nextId = 1;
+    await saveToStorage();
   }
-  // Fix missing status field (can happen if project was saved before auto-status was added)
-  if (!p.status) {
-    p.status = 'not-started'; // will be corrected immediately by applyAutoStatus()
-  }
-  // Fix missing owners array
-  if (!p.owners) {
-    p.owners = p.owner ? [p.owner] : [];
-  }
-  // Fix missing tasks array
-  if (!p.tasks) {
-    p.tasks = [];
-  }
-});
-renderAll();
+
+  migrationFixes();
+  renderAll();
+  startRealtimeSync(); // Start listening for changes from other devices
+}
+
+boot();
 </script>
 </body>
 </html>
