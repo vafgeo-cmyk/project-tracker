@@ -1698,6 +1698,8 @@ function renderAll() {
 
 function getFilteredSorted() {
   let list = [...projects];
+  // Always exclude archived projects (completed + deadline > 20 days ago)
+  list = list.filter(p => !(p.status === 'completed' && daysLeft(p.deadline) < -20));
   // status filter
   if (currentFilter !== 'all') list = list.filter(p => p.status === currentFilter);
   // priority filter
