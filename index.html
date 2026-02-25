@@ -1310,6 +1310,10 @@
       <span class="nav-icon">📅</span>
       <span>Calendar</span>
     </div>
+    <div class="nav-item" id="snav-archive" onclick="showArchiveView()">
+      <span class="nav-icon">🗂️</span>
+      <span>Archive <span id="archive-count" style="font-size:10px;background:rgba(138,163,189,0.15);color:var(--text3);padding:1px 6px;border-radius:10px;margin-left:2px">0</span></span>
+    </div>
 
     <div class="sidebar-label" style="margin-top:8px">Filter By Status</div>
     <div class="nav-item" id="snav-filter-all" onclick="filterStatus('all', this)">
@@ -1484,6 +1488,10 @@
 
       <div id="view-weekly" class="hidden">
         <div id="weekly-content"></div>
+      </div>
+
+      <div id="view-archive" class="hidden">
+        <div id="archive-content"></div>
       </div>
 
     </div>
@@ -2012,9 +2020,107 @@ function showWeeklyView() {
   `;
 }
 
+function showArchiveView() {
+  document.getElementById('page-title').textContent = 'Archive';
+  currentView = 'archive';
+  document.getElementById('view-table').classList.add('hidden');
+  document.getElementById('view-grid').classList.add('hidden');
+  document.getElementById('view-calendar').classList.add('hidden');
+  document.getElementById('view-weekly').classList.add('hidden');
+  document.getElementById('view-archive').classList.remove('hidden');
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  setSidebarNav('snav-archive');
+  setMobileNav('archive');
+
+  const archived = projects.filter(p => {
+    if (p.status !== 'completed') return false;
+    const dl = daysLeft(p.deadline);
+    return dl < -20;
+  }).sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+
+  // Update badge count
+  const countEl = document.getElementById('archive-count');
+  if (countEl) countEl.textContent = archived.length;
+
+  const content = document.getElementById('archive-content');
+
+  if (archived.length === 0) {
+    content.innerHTML = `
+      <div style="text-align:center;padding:80px 20px;color:var(--text3)">
+        <div style="font-size:48px;margin-bottom:16px">🗂️</div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text2);margin-bottom:8px">Archive is empty</div>
+        <div style="font-size:13px">Completed projects with a deadline more than 20 days ago will appear here.</div>
+      </div>`;
+    return;
+  }
+
+  // Group by year
+  const byYear = {};
+  archived.forEach(p => {
+    const yr = p.deadline ? new Date(p.deadline).getFullYear() : 'Unknown';
+    if (!byYear[yr]) byYear[yr] = [];
+    byYear[yr].push(p);
+  });
+
+  content.innerHTML = `
+    <div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Archived Projects</div>
+        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text)">${archived.length} completed project${archived.length !== 1 ? 's' : ''}</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 20px;text-align:center">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px">Avg Completion</div>
+        <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--green)">
+          ${Math.round(archived.reduce((s,p) => s + getProgress(p), 0) / archived.length)}%
+        </div>
+      </div>
+    </div>
+
+    ${Object.keys(byYear).sort((a,b) => b - a).map(yr => `
+      <div style="margin-bottom:28px">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:12px">
+          📁 ${yr} &nbsp;·&nbsp; ${byYear[yr].length} project${byYear[yr].length !== 1 ? 's' : ''}
+        </div>
+        ${byYear[yr].map(p => {
+          const pct = getProgress(p);
+          const overdueDays = Math.abs(daysLeft(p.deadline));
+          return `<div onclick="openDetail(${p.id})" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:8px;cursor:pointer;transition:border-color 0.15s;display:flex;align-items:center;gap:16px" onmouseover="this.style.borderColor='rgba(255,255,255,0.18)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.07)'">
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--green-dim);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">✅</div>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+                <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</span>
+              </div>
+              <div style="font-size:11px;color:var(--text3)">
+                ${ownersOf(p).join(', ') || '–'} &nbsp;·&nbsp; Completed ${fmtDate(p.deadline)} &nbsp;·&nbsp; ${overdueDays}d ago
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
+              <div style="text-align:right">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Progress</div>
+                <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--green)">${pct}%</div>
+              </div>
+              <div style="width:48px;height:48px;position:relative;flex-shrink:0">
+                <svg viewBox="0 0 36 36" style="width:100%;height:100%;transform:rotate(-90deg)">
+                  <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="3"/>
+                  <circle cx="18" cy="18" r="15" fill="none" stroke="#22d992" stroke-width="3"
+                    stroke-dasharray="${(pct / 100) * 94.25} 94.25" stroke-linecap="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    `).join('')}
+  `;
+}
+
 function updateCounts() {
   const statusCount = s => projects.filter(p => p.status === s).length;
   document.getElementById('cnt-all').textContent = projects.length;
+  // Update archive badge count
+  const archiveCount = projects.filter(p => p.status === 'completed' && daysLeft(p.deadline) < -20).length;
+  const archiveBadge = document.getElementById('archive-count');
+  if (archiveBadge) archiveBadge.textContent = archiveCount;
   document.getElementById('cnt-inprogress').textContent = statusCount('in-progress');
   document.getElementById('cnt-completed').textContent = statusCount('completed');
   document.getElementById('cnt-atrisk').textContent = statusCount('at-risk');
@@ -2059,19 +2165,20 @@ function switchView(view) {
   document.getElementById('view-grid').classList.toggle('hidden', view !== 'grid');
   document.getElementById('view-weekly').classList.toggle('hidden', view !== 'weekly');
   document.getElementById('view-calendar').classList.toggle('hidden', view !== 'calendar');
+  document.getElementById('view-archive').classList.toggle('hidden', view !== 'archive');
   document.getElementById('tab-table').classList.toggle('active', view === 'table');
   document.getElementById('tab-grid').classList.toggle('active', view === 'grid');
   document.getElementById('tab-calendar').classList.toggle('active', view === 'calendar');
   // Update sidebar nav highlight
-  const navMap = { table: 'snav-table', grid: 'snav-grid', calendar: 'snav-calendar', weekly: 'snav-weekly' };
+  const navMap = { table: 'snav-table', grid: 'snav-grid', calendar: 'snav-calendar', weekly: 'snav-weekly', archive: 'snav-archive' };
   if (navMap[view]) setSidebarNav(navMap[view]);
   if (view === 'calendar') {
     document.getElementById('page-title').textContent = 'Calendar';
     renderCalendar();
-  } else if (view !== 'weekly') {
+  } else if (view !== 'weekly' && view !== 'archive') {
     document.getElementById('page-title').textContent = currentFilter === 'all' ? 'All Projects' : statusLabel(currentFilter);
   }
-  if (view !== 'calendar') renderProjects();
+  if (view !== 'calendar' && view !== 'archive') renderProjects();
   setMobileNav(view);
 }
 
@@ -2818,6 +2925,7 @@ window.dragDrop = dragDrop;
 window.dragEnd = dragEnd;
 window.setMobileNav = setMobileNav;
 window.renderProjects = renderProjects;
+window.showArchiveView = showArchiveView;
 
 // ── Boot ──
 async function boot() {
