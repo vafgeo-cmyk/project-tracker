@@ -228,7 +228,7 @@
   /* ── Summary cards ── */
   .summary-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 12px;
     margin-bottom: 24px;
   }
@@ -258,6 +258,7 @@
   .summary-card.completed::after { background: var(--green); }
   .summary-card.atrisk::after { background: var(--red); }
   .summary-card.onhold::after { background: var(--orange); }
+  .summary-card.notstarted::after { background: var(--text3); }
 
   .summary-icon { font-size: 20px; margin-bottom: 8px; }
   .summary-num {
@@ -1089,6 +1090,11 @@
           <div class="summary-num" id="cnt-onhold">0</div>
           <div class="summary-label">On Hold</div>
         </div>
+        <div class="summary-card notstarted" style="cursor:pointer" onclick="filterStatus('not-started')">
+          <div class="summary-icon">🔘</div>
+          <div class="summary-num" id="cnt-notstarted">0</div>
+          <div class="summary-label">Not Started</div>
+        </div>
       </div>
 
       <!-- View controls -->
@@ -1621,6 +1627,7 @@ function updateCounts() {
   document.getElementById('cnt-completed').textContent = statusCount('completed');
   document.getElementById('cnt-atrisk').textContent = statusCount('at-risk');
   document.getElementById('cnt-onhold').textContent = statusCount('on-hold');
+  document.getElementById('cnt-notstarted').textContent = statusCount('not-started');
 }
 
 function updateSidebarStats() {
