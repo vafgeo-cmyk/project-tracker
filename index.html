@@ -43,6 +43,135 @@
     overflow-x: hidden;
   }
 
+
+
+  /* Hide edit controls for non-admins */
+  body:not(.is-admin) .admin-only { display: none !important; }
+  body:not(.is-admin) .viewer-notes { display: block !important; }
+  body.is-admin .viewer-notes { display: none !important; }
+  body:not(.is-admin) .row-actions { display: none !important; }
+  body:not(.is-admin) [onclick*="openEditModal"] { pointer-events: none; }
+
+  /* ── Auth / Login ── */
+  .auth-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(8px);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .auth-overlay.open { opacity: 1; pointer-events: all; }
+
+  .auth-card {
+    background: var(--navy2);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 380px;
+    padding: 36px 32px 28px;
+    transform: translateY(24px);
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  }
+  .auth-overlay.open .auth-card { transform: translateY(0); }
+
+  .auth-logo { text-align: center; margin-bottom: 24px; }
+  .auth-logo-icon { font-size: 36px; margin-bottom: 8px; }
+  .auth-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .auth-subtitle { font-size: 13px; color: var(--text3); text-align: center; margin-bottom: 24px; }
+
+  .auth-field { margin-bottom: 14px; }
+  .auth-label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; }
+  .auth-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .auth-input:focus { border-color: var(--blue); }
+  .auth-input::placeholder { color: var(--text3); }
+
+  .auth-btn {
+    width: 100%;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 11px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+    margin-top: 6px;
+  }
+  .auth-btn:hover { background: var(--blue-light); transform: translateY(-1px); }
+  .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  .auth-error {
+    background: var(--red-dim);
+    border: 1px solid rgba(255,77,106,0.3);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    font-size: 12.5px;
+    color: var(--red);
+    margin-bottom: 14px;
+    display: none;
+  }
+  .auth-error.show { display: block; }
+
+  /* Admin indicator in topbar */
+  .admin-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(34,217,146,0.12);
+    color: var(--green);
+    border: 1px solid rgba(34,217,146,0.25);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .admin-badge:hover { background: rgba(34,217,146,0.2); }
+
+  .admin-lock-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(138,163,189,0.1);
+    color: var(--text3);
+    border: 1px solid var(--border2);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .admin-lock-btn:hover { background: rgba(26,107,255,0.12); color: var(--blue-light); border-color: var(--blue); }
+
   /* ── Background mesh ── */
   body::before {
     content: '';
@@ -1222,12 +1351,18 @@
           <input type="text" placeholder="Search projects…" id="search-input" oninput="handleSearch()">
         </div>
         <button class="btn btn-ghost" onclick="exportData()" title="Export all data as JSON backup">⬇ Export</button>
-        <label class="btn btn-ghost" title="Import a previously exported JSON file" style="cursor:pointer;margin:0">
+        <label class="btn btn-ghost admin-only" title="Import a previously exported JSON file" style="cursor:pointer;margin:0">
           ⬆ Import<input type="file" accept=".json" onchange="importData(event)" style="display:none">
         </label>
-        <button class="btn btn-primary" onclick="openAddModal()">
+        <button class="btn btn-primary" id="btn-new-project" onclick="openAddModal()" style="display:none">
           <span>＋</span> New Project
         </button>
+        <div id="admin-logged-in" style="display:none">
+          <span class="admin-badge" onclick="doLogout()" title="Click to sign out">🟢 Admin <span style="opacity:0.6;font-weight:400">· Sign out</span></span>
+        </div>
+        <div id="admin-logged-out">
+          <span class="admin-lock-btn" onclick="showLoginModal()" title="Admin login">🔒 Admin Login</span>
+        </div>
       </div>
     </div>
 
@@ -1703,8 +1838,8 @@ function renderTable(list) {
 
       <td onclick="event.stopPropagation()">
         <div class="row-actions">
-          <button class="btn btn-ghost btn-sm" onclick="openEditModal(${p.id})">Edit</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteProject(${p.id})">Del</button>
+          <button class="btn btn-ghost btn-sm admin-only" onclick="openEditModal(${p.id})">Edit</button>
+          <button class="btn btn-danger btn-sm admin-only" onclick="deleteProject(${p.id})">Del</button>
         </div>
       </td>
     </tr>`;
@@ -1948,6 +2083,7 @@ function setMobileNav(view) {
 
 // ── Add/Edit Modal ──
 function openAddModal() {
+  if (!isAdmin) { showToast('🔒 Admin login required'); showLoginModal(); return; }
   editingId = null;
   document.getElementById('modal-title').textContent = 'New Project';
   currentOwners = [];
@@ -2086,7 +2222,7 @@ function openDetail(id) {
             <span class="task-delete" onclick="deleteTask(${p.id},${i})">✕</span>
           </div>`).join('')}
       </div>
-      <div class="add-task-row">
+      <div class="add-task-row admin-only">
         <input class="add-task-input" id="new-task-input-${p.id}" placeholder="Add a task and press Enter…" onkeydown="if(event.key==='Enter')addTask(${p.id})">
         <button class="btn btn-ghost btn-sm" onclick="addTask(${p.id})">Add</button>
       </div>
@@ -2094,7 +2230,8 @@ function openDetail(id) {
 
     <div class="detail-section">
       <div class="detail-section-title">Notes</div>
-      <textarea class="notes-area" id="notes-${p.id}" onblur="saveNotes(${p.id})" placeholder="Add notes, updates, blockers…">${p.notes||''}</textarea>
+      <textarea class="notes-area admin-only" id="notes-${p.id}" onblur="saveNotes(${p.id})" placeholder="Add notes, updates, blockers…">${p.notes||''}</textarea>
+      <div class="viewer-notes" style="display:none;font-size:13px;color:var(--text2);background:var(--navy3);border-radius:8px;padding:12px;white-space:pre-wrap;min-height:60px">${p.notes||'<span style=\"color:var(--text3)\">No notes added</span>'}</div>
     </div>
 
     <div class="detail-section">
@@ -2107,8 +2244,8 @@ function openDetail(id) {
     </div>
 
     <div style="display:flex;gap:8px;margin-top:16px">
-      <button class="btn btn-ghost" style="flex:1" onclick="openEditModal(${p.id});closeDetail()">Edit Project</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteProject(${p.id});closeDetail()">Delete</button>
+      <button class="btn btn-ghost admin-only" style="flex:1" onclick="openEditModal(${p.id});closeDetail()">Edit Project</button>
+      <button class="btn btn-danger btn-sm admin-only" onclick="deleteProject(${p.id});closeDetail()">Delete</button>
     </div>
   `;
 
@@ -2352,6 +2489,7 @@ function dragEnd(event) {
 // ── Firebase ──
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDdDCU32Kv1nDwz5l33tIkQ37W6DznV3sg",
@@ -2364,7 +2502,74 @@ const firebaseConfig = {
 
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
+const auth = getAuth(fbApp);
 const DATA_DOC = doc(db, 'tracker', 'data');
+
+// ── Auth state ──
+let isAdmin = false;
+
+function applyAdminUI(loggedIn) {
+  isAdmin = loggedIn;
+  document.body.classList.toggle('is-admin', loggedIn);
+  document.getElementById('btn-new-project').style.display = loggedIn ? '' : 'none';
+  document.getElementById('admin-logged-in').style.display = loggedIn ? '' : 'none';
+  document.getElementById('admin-logged-out').style.display = loggedIn ? 'none' : '';
+  // Re-render so edit/delete buttons appear/disappear
+  renderAll();
+}
+
+function showLoginModal() {
+  document.getElementById('auth-overlay').classList.add('open');
+  document.getElementById('auth-email').focus();
+  document.getElementById('auth-error').classList.remove('show');
+  document.getElementById('auth-password').value = '';
+}
+
+function hideLoginModal() {
+  document.getElementById('auth-overlay').classList.remove('open');
+}
+
+async function doLogin() {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const btn = document.getElementById('auth-btn');
+  const errEl = document.getElementById('auth-error');
+  if (!email || !password) {
+    errEl.textContent = 'Please enter your email and password.';
+    errEl.classList.add('show');
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+  errEl.classList.remove('show');
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    hideLoginModal();
+    showToast('✅ Signed in as admin');
+  } catch(e) {
+    const msg = e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found'
+      ? 'Incorrect email or password.' : 'Sign in failed. Please try again.';
+    errEl.textContent = msg;
+    errEl.classList.add('show');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+  }
+}
+
+async function doLogout() {
+  await signOut(auth);
+  showToast('👋 Signed out');
+}
+
+// Listen for auth state changes
+onAuthStateChanged(auth, (user) => {
+  applyAdminUI(!!user);
+});
+
+window.showLoginModal = showLoginModal;
+window.doLogin = doLogin;
+window.doLogout = doLogout;
 
 // Flag to prevent save loops when we receive our own updates
 let isSyncing = false;
@@ -2495,6 +2700,7 @@ function importData(event) {
 // Override deleteProject, saveProject, toggleTask, deleteTask, addTask, saveNotes
 const _origSave = saveProject;
 saveProject = function() {
+  if (!isAdmin) { showToast('🔒 Admin login required'); showLoginModal(); return; }
   const name = document.getElementById('f-name').value.trim();
   if (!name) { showToast('⚠️ Project name is required'); return; }
   const data = {
@@ -2524,6 +2730,7 @@ saveProject = function() {
 
 const _origDelete = deleteProject;
 deleteProject = function(id) {
+  if (!isAdmin) { showToast('🔒 Admin login required'); showLoginModal(); return; }
   if (!confirm('Delete this project?')) return;
   projects = projects.filter(p => p.id !== id);
   saveAndRender();
@@ -2532,6 +2739,7 @@ deleteProject = function(id) {
 
 const _origToggle = toggleTask;
 toggleTask = function(projId, taskIdx) {
+  if (!isAdmin) { showToast('🔒 Admin login required'); showLoginModal(); return; }
   const p = projects.find(x => x.id === projId);
   p.tasks[taskIdx].done = !p.tasks[taskIdx].done;
   p.updates = [...(p.updates||[]), `Task "${p.tasks[taskIdx].text}" marked ${p.tasks[taskIdx].done ? 'done' : 'incomplete'}`];
@@ -2541,6 +2749,7 @@ toggleTask = function(projId, taskIdx) {
 
 const _origDelTask = deleteTask;
 deleteTask = function(projId, taskIdx) {
+  if (!isAdmin) { showToast('🔒 Admin login required'); showLoginModal(); return; }
   const p = projects.find(x => x.id === projId);
   p.tasks.splice(taskIdx, 1);
   saveAndRender();
@@ -2549,6 +2758,7 @@ deleteTask = function(projId, taskIdx) {
 
 const _origAddTask = addTask;
 addTask = function(projId) {
+  if (!isAdmin) { showToast('🔒 Admin login required'); showLoginModal(); return; }
   const input = document.getElementById(`new-task-input-${projId}`);
   const text = input.value.trim();
   if (!text) return;
@@ -2562,6 +2772,7 @@ addTask = function(projId) {
 
 const _origSaveNotes = saveNotes;
 saveNotes = function(projId) {
+  if (!isAdmin) { showToast('🔒 Admin login required'); showLoginModal(); return; }
   const p = projects.find(x => x.id === projId);
   const el = document.getElementById(`notes-${projId}`);
   if (el) { p.notes = el.value; saveToStorage(); updateSidebarStats(); }
@@ -2619,10 +2830,11 @@ async function boot() {
   const hasStored = await loadFromStorage();
 
   if (!hasStored) {
-    // First ever load — no data in Firebase yet, start empty (no seed data)
+    // First ever load — no data in Firebase yet, start empty
     projects = [];
     nextId = 1;
-    await saveToStorage();
+    // Only write initial record if admin is signed in
+    if (isAdmin) await saveToStorage();
   }
 
   migrationFixes();
@@ -2632,5 +2844,26 @@ async function boot() {
 
 boot();
 </script>
+  <!-- ── Admin Login Modal ── -->
+  <div class="auth-overlay" id="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="auth-logo-icon">🔐</div>
+      </div>
+      <div class="auth-title">Admin Login</div>
+      <div class="auth-subtitle">Sign in to edit and manage projects</div>
+      <div class="auth-error" id="auth-error"></div>
+      <div class="auth-field">
+        <label class="auth-label">Email</label>
+        <input class="auth-input" id="auth-email" type="email" placeholder="admin@example.com" autocomplete="username">
+      </div>
+      <div class="auth-field">
+        <label class="auth-label">Password</label>
+        <input class="auth-input" id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="auth-btn" id="auth-btn" onclick="doLogin()">Sign In</button>
+    </div>
+  </div>
+
 </body>
 </html>
