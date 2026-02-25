@@ -943,12 +943,183 @@
 
   .hidden { display: none !important; }
 
-  /* Responsive tweak */
+  /* ══════════════════════════════════════
+     RESPONSIVE — TABLET (max 900px)
+  ══════════════════════════════════════ */
   @media (max-width: 900px) {
     .sidebar { width: 56px; min-width: 56px; }
     .sidebar-logo, .sidebar-label, .nav-item span, .sidebar-stats { display: none; }
     .nav-item { justify-content: center; padding: 12px; }
     .summary-grid { grid-template-columns: repeat(3, 1fr); }
+    .detail-panel { width: 420px; }
+  }
+
+  /* ══════════════════════════════════════
+     RESPONSIVE — MOBILE (max 640px)
+  ══════════════════════════════════════ */
+  @media (max-width: 640px) {
+
+    /* Hide sidebar entirely — replaced by bottom nav */
+    .sidebar { display: none; }
+
+    /* Full-width main */
+    .app { flex-direction: column; }
+    .main { height: 100vh; padding-bottom: 64px; }
+
+    /* Topbar */
+    .topbar { padding: 0 14px; height: 52px; gap: 8px; }
+    .topbar-title { font-size: 14px; }
+    .search-box { display: none; }
+    .btn-ghost:not(.mobile-show) { display: none; }
+    .btn-primary { padding: 7px 12px; font-size: 12px; }
+
+    /* Summary cards — 2 col on mobile, scroll if needed */
+    .summary-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .summary-card { padding: 12px; }
+    .summary-icon { font-size: 16px; margin-bottom: 4px; }
+    .summary-num { font-size: 22px; }
+    .summary-label { font-size: 11px; }
+
+    /* Content padding */
+    .content { padding: 14px; }
+
+    /* View controls */
+    .view-controls { flex-wrap: wrap; gap: 8px; }
+    .view-tabs { width: 100%; justify-content: stretch; }
+    .view-tab { flex: 1; text-align: center; font-size: 12px; padding: 6px 8px; }
+    .filter-group { width: 100%; }
+    .filter-select { flex: 1; font-size: 12px; }
+
+    /* Table — hide less important cols, make scrollable */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { min-width: 520px; }
+    th, td { padding: 10px 10px; font-size: 12px; }
+    th:first-child, td:first-child { padding-left: 12px; }
+    /* Hide budget/days on mobile */
+    th:nth-child(7), td:nth-child(7),
+    th:nth-child(8), td:nth-child(8) { display: none; }
+
+    /* Cards grid — single column */
+    .projects-grid { grid-template-columns: 1fr; gap: 12px; }
+    .project-card { padding: 16px; }
+
+    /* Calendar */
+    .cal-cell { min-height: 60px; padding: 3px; }
+    .cal-date { font-size: 10px; width: 18px; height: 18px; }
+    .cal-project-bar { font-size: 9px; padding: 1px 3px; }
+    .bar-label { font-size: 9px; }
+    .calendar-nav { padding: 10px 14px; }
+    .calendar-nav-title { font-size: 14px; }
+    .cal-nav-btn { padding: 5px 10px; font-size: 12px; }
+    .cal-day-header { font-size: 9px; padding: 6px 0; }
+    .cal-legend { gap: 8px; padding: 10px 12px; }
+    .cal-legend-item { font-size: 11px; }
+
+    /* Detail panel — full screen on mobile */
+    .detail-panel {
+      width: 100%;
+      border-left: none;
+      border-top: 1px solid var(--border2);
+      border-radius: 16px 16px 0 0;
+      top: auto;
+      bottom: 0;
+      max-height: 92vh;
+    }
+    .detail-overlay.open .detail-panel { transform: translateX(0); }
+
+    /* Modal — full screen */
+    .modal-overlay { padding: 0; align-items: flex-end; }
+    .modal {
+      border-radius: 16px 16px 0 0;
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-group.full { grid-column: span 1; }
+    .modal-body { padding: 16px; }
+    .modal-footer { padding: 12px 16px; }
+
+    /* Weekly view */
+    #weekly-content > div:first-child > div:first-child > div {
+      grid-template-columns: 1fr !important;
+    }
+
+    /* Bottom nav bar */
+    .mobile-bottom-nav {
+      display: flex !important;
+    }
+  }
+
+  /* Bottom nav (hidden on desktop) */
+  .mobile-bottom-nav {
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 64px;
+    background: var(--navy2);
+    border-top: 1px solid var(--border2);
+    z-index: 50;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 8px;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 10px;
+    transition: background 0.15s;
+    flex: 1;
+  }
+
+  .mobile-nav-item:hover, .mobile-nav-item.active {
+    background: rgba(26,107,255,0.12);
+  }
+
+  .mobile-nav-icon { font-size: 18px; line-height: 1; }
+
+  .mobile-nav-label {
+    font-size: 10px;
+    color: var(--text3);
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+
+  .mobile-nav-item.active .mobile-nav-label { color: var(--blue-light); }
+
+  /* Mobile search bar (shown below topbar on mobile) */
+  .mobile-search {
+    display: none;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--navy);
+  }
+
+  .mobile-search input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+  }
+
+  .mobile-search input::placeholder { color: var(--text3); }
+
+  @media (max-width: 640px) {
+    .mobile-search { display: block; }
   }
 </style>
 </head>
@@ -1058,6 +1229,11 @@
           <span>＋</span> New Project
         </button>
       </div>
+    </div>
+
+    <!-- Mobile search (shown only on small screens) -->
+    <div class="mobile-search">
+      <input type="text" placeholder="🔍  Search projects…" id="mobile-search-input" oninput="document.getElementById('search-input').value=this.value;handleSearch()">
     </div>
 
     <!-- Content -->
@@ -1267,6 +1443,30 @@
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+
+<!-- Mobile bottom nav -->
+<nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+  <div class="mobile-nav-item active" id="mnav-table" onclick="switchView('table');setMobileNav('table')">
+    <span class="mobile-nav-icon">📋</span>
+    <span class="mobile-nav-label">List</span>
+  </div>
+  <div class="mobile-nav-item" id="mnav-grid" onclick="switchView('grid');setMobileNav('grid')">
+    <span class="mobile-nav-icon">⊞</span>
+    <span class="mobile-nav-label">Cards</span>
+  </div>
+  <div class="mobile-nav-item" id="mnav-calendar" onclick="switchView('calendar');setMobileNav('calendar')">
+    <span class="mobile-nav-icon">📅</span>
+    <span class="mobile-nav-label">Calendar</span>
+  </div>
+  <div class="mobile-nav-item" id="mnav-weekly" onclick="showWeeklyView();setMobileNav('weekly')">
+    <span class="mobile-nav-icon">📊</span>
+    <span class="mobile-nav-label">Weekly</span>
+  </div>
+  <div class="mobile-nav-item" id="mnav-add" onclick="openAddModal()">
+    <span class="mobile-nav-icon">＋</span>
+    <span class="mobile-nav-label">New</span>
+  </div>
+</nav>
 
 <script>
 // ── State ──
@@ -1670,6 +1870,13 @@ function switchView(view) {
     document.getElementById('page-title').textContent = currentFilter === 'all' ? 'All Projects' : statusLabel(currentFilter);
   }
   if (view !== 'calendar') renderProjects();
+  setMobileNav(view);
+}
+
+function setMobileNav(view) {
+  document.querySelectorAll('.mobile-nav-item').forEach(el => el.classList.remove('active'));
+  const map = { table: 'mnav-table', grid: 'mnav-grid', calendar: 'mnav-calendar', weekly: 'mnav-weekly' };
+  if (map[view]) document.getElementById(map[view])?.classList.add('active');
 }
 
 // ── Add/Edit Modal ──
