@@ -1828,7 +1828,10 @@ function renderTable(list) {
         <div class="project-name-cell">
           <div class="project-color-dot ${p.color}"></div>
           <div>
-            <div class="project-name">${p.name}</div>
+            <div style="display:flex;align-items:center;gap:7px">
+              <div class="project-name">${p.name}</div>
+              ${p.jira ? `<a href="${p.jira}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Open in Jira" style="display:inline-flex;align-items:center;gap:3px;background:rgba(26,107,255,0.12);border:1px solid rgba(26,107,255,0.25);border-radius:5px;padding:1px 6px;color:var(--blue-light);font-size:10px;font-weight:600;text-decoration:none;white-space:nowrap;transition:all 0.15s" onmouseover="this.style.background='rgba(26,107,255,0.22)'" onmouseout="this.style.background='rgba(26,107,255,0.12)'">🔗 Jira</a>` : ''}
+            </div>
             <div class="project-id">PRJ-${String(p.id).padStart(3,'0')} · <span style="color:var(--blue-light)">${typeLabel(p.color)}</span></div>
           </div>
         </div>
