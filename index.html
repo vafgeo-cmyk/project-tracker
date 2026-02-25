@@ -1786,17 +1786,17 @@ function showWeeklyView() {
     <div style="margin-bottom:20px">
       <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:12px">This week at a glance — ${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px">Active Projects</div>
-          <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--blue-light)">${active.length}</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px;min-height:2.4em;display:flex;align-items:flex-start">Active Projects</div>
+          <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--blue-light);line-height:1;margin-top:auto">${active.length}</div>
         </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px">Tasks Due Soon</div>
-          <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--yellow)">${projects.filter(p=>p.status!=='completed'&&daysLeft(p.deadline)<=7&&daysLeft(p.deadline)>=0).length}</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px;min-height:2.4em;display:flex;align-items:flex-start">Tasks Due Soon</div>
+          <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--yellow);line-height:1;margin-top:auto">${projects.filter(p=>p.status!=='completed'&&daysLeft(p.deadline)<=7&&daysLeft(p.deadline)>=0).length}</div>
         </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px">Overdue</div>
-          <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--red)">${projects.filter(p=>p.status!=='completed'&&daysLeft(p.deadline)<0).length}</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px;min-height:2.4em;display:flex;align-items:flex-start">Overdue</div>
+          <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--red);line-height:1;margin-top:auto">${projects.filter(p=>p.status!=='completed'&&daysLeft(p.deadline)<0).length}</div>
         </div>
       </div>
     </div>
