@@ -1559,6 +1559,13 @@
           <label class="form-label">Description</label>
           <textarea class="form-input" id="f-desc" placeholder="Describe the project objective…"></textarea>
         </div>
+        <div class="form-group full">
+          <label class="form-label">Jira Link</label>
+          <div style="position:relative">
+            <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;opacity:0.5">🔗</span>
+            <input class="form-input" id="f-jira" type="url" placeholder="https://yourcompany.atlassian.net/browse/PROJ-123" style="padding-left:30px">
+          </div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -2218,6 +2225,7 @@ function openEditModal(id) {
   document.getElementById('f-deadline').value = p.deadline || '';
   document.getElementById('f-color').value = p.color || 'color-blue';
   document.getElementById('f-desc').value = p.desc || '';
+  document.getElementById('f-jira').value = p.jira || '';
   document.getElementById('project-modal').classList.add('open');
 }
 
@@ -2230,7 +2238,7 @@ function handleModalClick(e) {
 }
 
 function clearForm() {
-  ['f-name','f-desc'].forEach(id => document.getElementById(id).value = '');
+  ['f-name','f-desc','f-jira'].forEach(id => document.getElementById(id).value = '');
   currentOwners = []; renderOwnerTags();
   document.getElementById('f-status').value = 'auto';
   document.getElementById('f-priority').value = 'Medium';
@@ -2251,6 +2259,7 @@ function saveProject() {
 
     color: document.getElementById('f-color').value,
     desc: document.getElementById('f-desc').value.trim(),
+    jira: document.getElementById('f-jira').value.trim(),
   };
 
   if (editingId) {
@@ -2303,6 +2312,21 @@ function openDetail(id) {
     </div>
 
     ${p.desc ? `<div class="detail-section">
+      ${p.jira ? `
+      <div class="detail-section" style="margin-bottom:16px">
+        <a href="${p.jira}" target="_blank" rel="noopener noreferrer"
+          style="display:inline-flex;align-items:center;gap:8px;background:rgba(26,107,255,0.12);border:1px solid rgba(26,107,255,0.3);border-radius:8px;padding:9px 14px;color:var(--blue-light);font-size:13px;font-weight:600;text-decoration:none;transition:all 0.15s"
+          onmouseover="this.style.background='rgba(26,107,255,0.2)'"
+          onmouseout="this.style.background='rgba(26,107,255,0.12)'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0">
+            <path d="M11.571 11.513H8a2 2 0 1 0 0 4h3.571a2 2 0 1 0 0-4zm5.715-3.886H8a2 2 0 1 0 0 4h9.286a2 2 0 1 0 0-4zM8 6.143h5.714a2 2 0 1 0 0-4H8a2 2 0 1 0 0 4z"/>
+          </svg>
+          Open in Jira
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:0.6;flex-shrink:0">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>
+          </svg>
+        </a>
+      </div>` : ''}
       <div class="detail-section-title">Description</div>
       <div style="font-size:13.5px;color:var(--text2);line-height:1.6;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px">${p.desc}</div>
     </div>` : ''}
@@ -2823,6 +2847,7 @@ saveProject = function() {
 
     color: document.getElementById('f-color').value,
     desc: document.getElementById('f-desc').value.trim(),
+    jira: document.getElementById('f-jira').value.trim(),
   };
   if (editingId) {
     const idx = projects.findIndex(p => p.id === editingId);
