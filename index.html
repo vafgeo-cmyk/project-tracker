@@ -1948,7 +1948,7 @@ function showWeeklyView() {
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column">
           <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px;min-height:2.4em;display:flex;align-items:flex-start">Tasks Due Soon</div>
-          <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--yellow);line-height:1;margin-top:auto">${projects.filter(p=>p.status!=='completed'&&daysLeft(p.deadline)<=7&&daysLeft(p.deadline)>=0).length}</div>
+          <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--yellow);line-height:1;margin-top:auto">${projects.filter(p=>p.status!=='completed'&&daysLeft(p.deadline)<=14&&daysLeft(p.deadline)>=0).length}</div>
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column">
           <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px;min-height:2.4em;display:flex;align-items:flex-start">Overdue</div>
@@ -1958,54 +1958,10 @@ function showWeeklyView() {
     </div>
 
     ${(() => {
-      // Projects due this week (deadline within next 7 days, not completed)
-      const weekProjects = projects.filter(p => {
-        const dl = daysLeft(p.deadline);
-        return p.status !== 'completed' && dl >= 0 && dl <= 7;
-      });
-      if (weekProjects.length === 0) return '';
-      const avgPct = weekProjects.length > 0
-        ? Math.round(weekProjects.reduce((sum, p) => sum + getProgress(p), 0) / weekProjects.length)
-        : 0;
-      const col = progressColor(avgPct);
-      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:20px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <div>
-            <div style="font-size:13px;font-weight:600;color:var(--text)">📦 This Week's Delivery Progress</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:2px">${weekProjects.length} project${weekProjects.length!==1?'s':''} due within 7 days</div>
-          </div>
-          <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:${col}">${avgPct}%</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.06);border-radius:10px;height:10px;overflow:hidden;margin-bottom:12px">
-          <div style="height:100%;width:${avgPct}%;background:${col};border-radius:10px;transition:width 0.6s cubic-bezier(0.4,0,0.2,1)"></div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:7px">
-          ${weekProjects.map(p => {
-            const pct = getProgress(p);
-            const dl = daysLeft(p.deadline);
-            const c = progressColor(pct);
-            return `<div style="display:flex;align-items:center;gap:10px">
-              <div style="width:8px;height:8px;border-radius:50%;background:${c};flex-shrink:0"></div>
-              <div style="flex:1;min-width:0">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
-                  <span style="font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%">${p.name}</span>
-                  <span style="font-size:11px;color:${dl<=2?'var(--red)':'var(--text3)'};flex-shrink:0;margin-left:8px">${dl===0?'Due today':dl===1?'Due tomorrow':dl+'d left'} · ${pct}%</span>
-                </div>
-                <div style="background:rgba(255,255,255,0.06);border-radius:6px;height:4px;overflow:hidden">
-                  <div style="height:100%;width:${pct}%;background:${c};border-radius:6px"></div>
-                </div>
-              </div>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>`;
-    })()}
-
-    ${(() => {
       // Projects due by this Saturday (end of current calendar week)
       const today = new Date(); today.setHours(0,0,0,0);
       const thisSat = new Date(today);
-      thisSat.setDate(today.getDate() + (6 - today.getDay())); // 0=Sun…6=Sat
+      thisSat.setDate(today.getDate() + (6 - today.getDay()));
       thisSat.setHours(23,59,59,999);
       const satProjects = projects.filter(p => {
         if (p.status === 'completed') return false;
@@ -2016,14 +1972,13 @@ function showWeeklyView() {
       const avgPct = Math.round(satProjects.reduce((sum, p) => sum + getProgress(p), 0) / satProjects.length);
       const col = progressColor(avgPct);
       const satLabel = thisSat.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
-      // Days until Saturday
       const daysToSat = Math.round((thisSat - today) / 86400000);
       const satCountdown = daysToSat === 0 ? 'today' : daysToSat === 1 ? 'tomorrow' : `${daysToSat}d away`;
       return `<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--cyan);border-radius:var(--radius);padding:18px;margin-bottom:20px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
           <div>
-            <div style="font-size:13px;font-weight:600;color:var(--text)">📅 This Saturday's Delivery — <span style="color:var(--cyan)">${satLabel}</span></div>
-            <div style="font-size:11px;color:var(--text3);margin-top:2px">${satProjects.length} project${satProjects.length!==1?'s':''} due by Saturday · Saturday is ${satCountdown}</div>
+            <div style="font-size:13px;font-weight:600;color:var(--text)">📅 Projects due to be delivered this week — <span style="color:var(--cyan)">by Sat ${satLabel}</span></div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">${satProjects.length} project${satProjects.length!==1?'s':''} due by this Saturday · ${satCountdown}</div>
           </div>
           <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:${col}">${avgPct}%</div>
         </div>
@@ -2054,11 +2009,53 @@ function showWeeklyView() {
     })()}
 
     ${(() => {
+      // Projects due within next 14 days rolling
+      const rollingProjects = projects.filter(p => {
+        const dl = daysLeft(p.deadline);
+        return p.status !== 'completed' && dl >= 0 && dl <= 14;
+      });
+      if (rollingProjects.length === 0) return '';
+      const avgPct = Math.round(rollingProjects.reduce((sum, p) => sum + getProgress(p), 0) / rollingProjects.length);
+      const col = progressColor(avgPct);
+      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text)">📦 Projects due in next 14 days rolling</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">${rollingProjects.length} project${rollingProjects.length!==1?'s':''} due within 14 days</div>
+          </div>
+          <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:${col}">${avgPct}%</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.06);border-radius:10px;height:10px;overflow:hidden;margin-bottom:12px">
+          <div style="height:100%;width:${avgPct}%;background:${col};border-radius:10px;transition:width 0.6s cubic-bezier(0.4,0,0.2,1)"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          ${rollingProjects.map(p => {
+            const pct = getProgress(p);
+            const dl = daysLeft(p.deadline);
+            const c = progressColor(pct);
+            return `<div style="display:flex;align-items:center;gap:10px">
+              <div style="width:8px;height:8px;border-radius:50%;background:${c};flex-shrink:0"></div>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+                  <span style="font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%">${p.name}</span>
+                  <span style="font-size:11px;color:${dl<=2?'var(--red)':'var(--text3)'};flex-shrink:0;margin-left:8px">${dl===0?'Due today':dl===1?'Due tomorrow':dl+'d left'} · ${pct}%</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.06);border-radius:6px;height:4px;overflow:hidden">
+                  <div style="height:100%;width:${pct}%;background:${c};border-radius:6px"></div>
+                </div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    })()}
+
+    ${(() => {
       const weekCards = projects.filter(p => {
         const dl = daysLeft(p.deadline);
-        return p.status !== 'completed' && dl >= 0 && dl <= 7;
+        return p.status !== 'completed' && dl >= 0 && dl <= 14;
       }).sort((a, b) => daysLeft(a.deadline) - daysLeft(b.deadline));
-      if (weekCards.length === 0) return '<div style="text-align:center;padding:40px;color:var(--text3)">🎉 No projects due in the next 7 days</div>';
+      if (weekCards.length === 0) return '<div style="text-align:center;padding:40px;color:var(--text3)">🎉 No projects due in the next 14 days</div>';
       return weekCards.map(p => {
         const pct = getProgress(p);
         const dl = daysLeft(p.deadline);
