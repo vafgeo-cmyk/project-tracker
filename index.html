@@ -1964,15 +1964,14 @@ function showWeeklyView() {
       thisSat.setDate(today.getDate() + (6 - today.getDay()));
       thisSat.setHours(23,59,59,999);
       const satProjects = projects.filter(p => {
+        if (p.status === 'on-hold') return false;
         const d = new Date(p.deadline); d.setHours(0,0,0,0);
-        // Include: due this week (any status) OR overdue but not yet completed
         const dueThisWeek = d >= today && d <= thisSat;
         const overdueIncomplete = d < today && p.status !== 'completed';
         return dueThisWeek || overdueIncomplete;
       });
       if (satProjects.length === 0) return '';
-      const satActive = satProjects.filter(p => p.status !== 'on-hold');
-      const avgPct = satActive.length ? Math.round(satActive.reduce((sum, p) => sum + getProgress(p), 0) / satActive.length) : 0;
+      const avgPct = satProjects.length ? Math.round(satProjects.reduce((sum, p) => sum + getProgress(p), 0) / satProjects.length) : 0;
       const col = progressColor(avgPct);
       const satLabel = thisSat.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
       const daysToSat = Math.round((thisSat - today) / 86400000);
@@ -2014,15 +2013,14 @@ function showWeeklyView() {
     ${(() => {
       // Projects due within next 14 days rolling
       const rollingProjects = projects.filter(p => {
+        if (p.status === 'on-hold') return false;
         const dl = daysLeft(p.deadline);
-        // Include: due within 14 days (any status) OR overdue but not yet completed
         const dueInWindow = dl >= 0 && dl <= 14;
         const overdueIncomplete = dl < 0 && p.status !== 'completed';
         return dueInWindow || overdueIncomplete;
       });
       if (rollingProjects.length === 0) return '';
-      const rollActive = rollingProjects.filter(p => p.status !== 'on-hold');
-      const avgPct = rollActive.length ? Math.round(rollActive.reduce((sum, p) => sum + getProgress(p), 0) / rollActive.length) : 0;
+      const avgPct = rollingProjects.length ? Math.round(rollingProjects.reduce((sum, p) => sum + getProgress(p), 0) / rollingProjects.length) : 0;
       const col = progressColor(avgPct);
       return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:20px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
