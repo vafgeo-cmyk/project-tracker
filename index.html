@@ -1964,7 +1964,6 @@ function showWeeklyView() {
       thisSat.setDate(today.getDate() + (6 - today.getDay()));
       thisSat.setHours(23,59,59,999);
       const satProjects = projects.filter(p => {
-        if (p.status === 'completed') return false;
         const d = new Date(p.deadline); d.setHours(0,0,0,0);
         return d >= today && d <= thisSat;
       });
@@ -2012,7 +2011,7 @@ function showWeeklyView() {
       // Projects due within next 14 days rolling
       const rollingProjects = projects.filter(p => {
         const dl = daysLeft(p.deadline);
-        return p.status !== 'completed' && dl >= 0 && dl <= 14;
+        return dl >= 0 && dl <= 14;
       });
       if (rollingProjects.length === 0) return '';
       const avgPct = Math.round(rollingProjects.reduce((sum, p) => sum + getProgress(p), 0) / rollingProjects.length);
