@@ -1971,7 +1971,8 @@ function showWeeklyView() {
         return dueThisWeek || overdueIncomplete;
       });
       if (satProjects.length === 0) return '';
-      const avgPct = Math.round(satProjects.reduce((sum, p) => sum + getProgress(p), 0) / satProjects.length);
+      const satActive = satProjects.filter(p => p.status !== 'on-hold');
+      const avgPct = satActive.length ? Math.round(satActive.reduce((sum, p) => sum + getProgress(p), 0) / satActive.length) : 0;
       const col = progressColor(avgPct);
       const satLabel = thisSat.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
       const daysToSat = Math.round((thisSat - today) / 86400000);
@@ -2020,7 +2021,8 @@ function showWeeklyView() {
         return dueInWindow || overdueIncomplete;
       });
       if (rollingProjects.length === 0) return '';
-      const avgPct = Math.round(rollingProjects.reduce((sum, p) => sum + getProgress(p), 0) / rollingProjects.length);
+      const rollActive = rollingProjects.filter(p => p.status !== 'on-hold');
+      const avgPct = rollActive.length ? Math.round(rollActive.reduce((sum, p) => sum + getProgress(p), 0) / rollActive.length) : 0;
       const col = progressColor(avgPct);
       return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:20px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -2408,7 +2410,7 @@ function openDetail(id) {
             ondragend="dragEnd(event)">
             <div class="drag-handle" title="Drag to reorder"><span></span><span></span><span></span></div>
             <div class="task-check ${t.done?'checked':''}" onclick="toggleTask(${p.id},${i})">${t.done?'✓':''}</div>
-            <span class="task-text ${t.done?'done':''}">${t.text}</span>
+            <span class="task-text ${t.done?'done':''}" title="Double-click to edit" ondblclick="editTaskInline(event,${p.id},${i})">${t.text}</span>
             <span class="task-delete" onclick="deleteTask(${p.id},${i})">✕</span>
           </div>`).join('')}
       </div>
@@ -2460,6 +2462,34 @@ function deleteTask(projId, taskIdx) {
   p.tasks.splice(taskIdx, 1);
   renderAll();
   openDetail(projId);
+}
+
+function editTaskInline(e, projId, taskIdx) {
+  const span = e.target;
+  const current = span.textContent;
+  const input = document.createElement('input');
+  input.value = current;
+  input.style.cssText = 'flex:1;background:var(--navy3);border:1px solid var(--blue);border-radius:4px;padding:2px 6px;font-size:13px;color:var(--text);outline:none;min-width:0;';
+  span.replaceWith(input);
+  input.focus();
+  input.select();
+
+  function save() {
+    const newText = input.value.trim();
+    if (newText && newText !== current) {
+      const p = projects.find(x => x.id === projId);
+      p.tasks[taskIdx].text = newText;
+      p.updates = [...(p.updates||[]), `Task renamed: "${current}" → "${newText}"`];
+      renderAll();
+    }
+    openDetail(projId);
+  }
+
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { input.blur(); }
+    if (e.key === 'Escape') { input.removeEventListener('blur', save); openDetail(projId); }
+  });
 }
 
 function addTask(projId) {
@@ -2991,6 +3021,7 @@ window.closeDetail = closeDetail;
 window.toggleTask = toggleTask;
 window.deleteTask = deleteTask;
 window.addTask = addTask;
+window.editTaskInline = editTaskInline;
 window.saveNotes = saveNotes;
 window.switchView = switchView;
 window.showWeeklyView = showWeeklyView;
