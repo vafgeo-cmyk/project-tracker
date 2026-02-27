@@ -1965,7 +1965,10 @@ function showWeeklyView() {
       thisSat.setHours(23,59,59,999);
       const satProjects = projects.filter(p => {
         const d = new Date(p.deadline); d.setHours(0,0,0,0);
-        return d >= today && d <= thisSat;
+        // Include: due this week (any status) OR overdue but not yet completed
+        const dueThisWeek = d >= today && d <= thisSat;
+        const overdueIncomplete = d < today && p.status !== 'completed';
+        return dueThisWeek || overdueIncomplete;
       });
       if (satProjects.length === 0) return '';
       const avgPct = Math.round(satProjects.reduce((sum, p) => sum + getProgress(p), 0) / satProjects.length);
@@ -2011,7 +2014,10 @@ function showWeeklyView() {
       // Projects due within next 14 days rolling
       const rollingProjects = projects.filter(p => {
         const dl = daysLeft(p.deadline);
-        return dl >= 0 && dl <= 14;
+        // Include: due within 14 days (any status) OR overdue but not yet completed
+        const dueInWindow = dl >= 0 && dl <= 14;
+        const overdueIncomplete = dl < 0 && p.status !== 'completed';
+        return dueInWindow || overdueIncomplete;
       });
       if (rollingProjects.length === 0) return '';
       const avgPct = Math.round(rollingProjects.reduce((sum, p) => sum + getProgress(p), 0) / rollingProjects.length);
