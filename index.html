@@ -1705,8 +1705,8 @@ function renderAll() {
 
 function getFilteredSorted() {
   let list = [...projects];
-  // Always exclude archived projects (completed + deadline > 20 days ago)
-  list = list.filter(p => !(p.status === 'completed' && daysLeft(p.deadline) < -20));
+  // Always exclude archived projects (completed + deadline > 7 days ago)
+  list = list.filter(p => !(p.status === 'completed' && daysLeft(p.deadline) < -7));
   // status filter
   if (currentFilter !== 'all') list = list.filter(p => p.status === currentFilter);
   // priority filter
@@ -2101,7 +2101,7 @@ function showArchiveView() {
   const archived = projects.filter(p => {
     if (p.status !== 'completed') return false;
     const dl = daysLeft(p.deadline);
-    return dl < -20;
+    return dl < -7;
   }).sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
 
   // Update badge count
@@ -2184,7 +2184,7 @@ function updateCounts() {
   const statusCount = s => projects.filter(p => p.status === s).length;
   document.getElementById('cnt-all').textContent = projects.length;
   // Update archive badge count
-  const archiveCount = projects.filter(p => p.status === 'completed' && daysLeft(p.deadline) < -20).length;
+  const archiveCount = projects.filter(p => p.status === 'completed' && daysLeft(p.deadline) < -7).length;
   const archiveBadge = document.getElementById('archive-count');
   if (archiveBadge) archiveBadge.textContent = archiveCount;
   document.getElementById('cnt-inprogress').textContent = statusCount('in-progress');
