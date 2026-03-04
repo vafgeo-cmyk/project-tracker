@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<link rel="shortcut icon" type="image/png" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Project Tracker">
@@ -1713,7 +1716,7 @@ function renderAll() {
 function getFilteredSorted() {
   let list = [...projects];
   // Always exclude archived projects (completed + deadline > 7 days ago)
-  list = list.filter(p => !(p.status === 'completed' && daysLeft(p.deadline) < -7));
+  list = list.filter(p => !p.manualArchive && !(p.status === 'completed' && daysLeft(p.deadline) < -7));
   // status filter
   if (currentFilter !== 'all') list = list.filter(p => p.status === currentFilter);
   // priority filter
@@ -2106,6 +2109,7 @@ function showArchiveView() {
   setMobileNav('archive');
 
   const archived = projects.filter(p => {
+    if (p.manualArchive) return true;
     if (p.status !== 'completed') return false;
     const dl = daysLeft(p.deadline);
     return dl < -7;
@@ -2191,7 +2195,7 @@ function updateCounts() {
   const statusCount = s => projects.filter(p => p.status === s).length;
   document.getElementById('cnt-all').textContent = projects.length;
   // Update archive badge count
-  const archiveCount = projects.filter(p => p.status === 'completed' && daysLeft(p.deadline) < -7).length;
+  const archiveCount = projects.filter(p => p.manualArchive || (p.status === 'completed' && daysLeft(p.deadline) < -7)).length;
   const archiveBadge = document.getElementById('archive-count');
   if (archiveBadge) archiveBadge.textContent = archiveCount;
   document.getElementById('cnt-inprogress').textContent = statusCount('in-progress');
@@ -2443,11 +2447,33 @@ function openDetail(id) {
 
     <div style="display:flex;gap:8px;margin-top:16px">
       <button class="btn btn-ghost admin-only" style="flex:1" onclick="openEditModal(${p.id});closeDetail()">Edit Project</button>
+      ${(p.status === 'completed' || p.statusOverride === 'on-hold' || p.status === 'on-hold') && !p.manualArchive ? `<button class="btn btn-ghost btn-sm admin-only" style="color:var(--text3);border-color:var(--border)" onclick="archiveProject(${p.id})">🗂 Archive</button>` : ''}
+      ${p.manualArchive ? `<button class="btn btn-ghost btn-sm admin-only" style="color:var(--yellow);border-color:var(--yellow)30" onclick="unarchiveProject(${p.id})">↩ Unarchive</button>` : ''}
       <button class="btn btn-danger btn-sm admin-only" onclick="deleteProject(${p.id});closeDetail()">Delete</button>
     </div>
   `;
 
   document.getElementById('detail-overlay').classList.add('open');
+}
+
+function archiveProject(id) {
+  const p = projects.find(x => x.id === id);
+  if (!p) return;
+  p.manualArchive = true;
+  p.updates = [...(p.updates||[]), 'Manually archived'];
+  saveAndRender();
+  closeDetail();
+  showToast('🗂 Project archived');
+}
+
+function unarchiveProject(id) {
+  const p = projects.find(x => x.id === id);
+  if (!p) return;
+  p.manualArchive = false;
+  p.updates = [...(p.updates||[]), 'Restored from archive'];
+  saveAndRender();
+  closeDetail();
+  showToast('↩ Project restored');
 }
 
 function closeDetail() {
@@ -3044,6 +3070,8 @@ window.openEditModal = openEditModal;
 window.closeModal = closeModal;
 window.handleModalClick = handleModalClick;
 window.saveProject = saveProject;
+window.archiveProject = archiveProject;
+window.unarchiveProject = unarchiveProject;
 window.deleteProject = deleteProject;
 window.openDetail = openDetail;
 window.closeDetail = closeDetail;
