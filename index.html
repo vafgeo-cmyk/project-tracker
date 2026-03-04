@@ -1586,7 +1586,7 @@
   <div class="detail-backdrop" onclick="closeDetail()"></div>
   <div class="detail-panel" id="detail-panel">
     <div class="detail-header">
-      <div class="detail-title" id="d-title">Project Name</div>
+      <div class="detail-title" id="d-title" title="Double-click to rename" ondblclick="inlineRenameProject()" style="cursor:text">Project Name</div>
       <div class="detail-close" onclick="closeDetail()">✕</div>
       <div style="display:flex;gap:8px;margin-top:10px">
         <span class="badge" id="d-status-badge"></span>
@@ -1630,6 +1630,7 @@ let projects = [];
 let currentFilter = 'all';
 let currentView = 'table';
 let editingId = null;
+let currentDetailId = null;
 let nextId = 1;
 
 // ── Initial data ──
@@ -2349,6 +2350,7 @@ function deleteProject(id) {
 function openDetail(id) {
   const p = projects.find(x => x.id === id);
   if (!p) return;
+  currentDetailId = id;
 
   document.getElementById('d-title').textContent = p.name;
   document.getElementById('d-status-badge').className = `badge ${p.status}`;
@@ -2577,6 +2579,48 @@ const colorMap = {
   'color-purple':'#a78bfa','color-pink':'#f472b6'
 };
 
+function inlineRenameProject() {
+  const titleEl = document.getElementById('d-title');
+  const currentName = titleEl.textContent;
+  const input = document.createElement('input');
+  input.value = currentName;
+  input.style.cssText = 'width:100%;background:var(--navy3);border:1px solid var(--blue);border-radius:6px;padding:4px 8px;font-size:inherit;font-weight:inherit;font-family:inherit;color:var(--text);outline:none;';
+  titleEl.replaceWith(input);
+  input.focus();
+  input.select();
+
+  function save() {
+    const newName = input.value.trim();
+    const newTitle = document.createElement('div');
+    newTitle.className = 'detail-title';
+    newTitle.id = 'd-title';
+    newTitle.title = 'Double-click to rename';
+    newTitle.style.cursor = 'text';
+    newTitle.ondblclick = inlineRenameProject;
+    if (newName && newName !== currentName) {
+      const p = projects.find(x => x.id === currentDetailId);
+      if (p) {
+        p.name = newName;
+        p.updates = [...(p.updates||[]), `Renamed to "${newName}"`];
+        renderAll();
+        newTitle.textContent = newName;
+        showToast('✅ Project renamed');
+      } else {
+        newTitle.textContent = currentName;
+      }
+    } else {
+      newTitle.textContent = currentName;
+    }
+    input.replaceWith(newTitle);
+  }
+
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') input.blur();
+    if (e.key === 'Escape') { input.removeEventListener('blur', save); const el = document.createElement('div'); el.className='detail-title'; el.id='d-title'; el.title='Double-click to rename'; el.style.cursor='text'; el.ondblclick=inlineRenameProject; el.textContent=currentName; input.replaceWith(el); }
+  });
+}
+
 function calNav(dir) { calMonth += dir; if (calMonth > 11) { calMonth = 0; calYear++; } else if (calMonth < 0) { calMonth = 11; calYear--; } renderCalendar(); }
 function goToday() { calYear = new Date().getFullYear(); calMonth = new Date().getMonth(); renderCalendar(); }
 
@@ -2596,46 +2640,26 @@ function renderCalendar() {
   for (let i = 1; i <= daysInMonth; i++) cells.push({ day: i, cur: true, date: new Date(calYear, calMonth, i) });
   while (cells.length < 42) { const n = cells.length - firstDay - daysInMonth + 1; cells.push({ day: n, cur: false, date: new Date(calYear, calMonth + 1, n) }); }
 
-  // Map projects to their date ranges
-  const projsWithDates = projects.filter(p => p.start && p.deadline);
+  // Map projects — show only on deadline day
+  const projsWithDates = projects.filter(p => p.deadline);
 
   grid.innerHTML = cells.map(cell => {
     const d = cell.date;
     const isToday = d.getTime() === today.getTime();
     const isCur = cell.cur;
 
-    // Find projects active on this day
-    const bars = projsWithDates.filter(p => {
-      const s = new Date(p.start); s.setHours(0,0,0,0);
-      const e = new Date(p.deadline); e.setHours(0,0,0,0);
-      return d >= s && d <= e;
-    }).slice(0, 3);
-
-    // Deadline dots for projects ending today
+    // Only show projects whose deadline falls on this exact day
     const deadlines = projsWithDates.filter(p => {
       const e = new Date(p.deadline); e.setHours(0,0,0,0);
       return d.getTime() === e.getTime();
-    });
+    }).slice(0, 3);
 
-    const barsHtml = bars.map(p => {
-      const s = new Date(p.start); s.setHours(0,0,0,0);
-      const e = new Date(p.deadline); e.setHours(0,0,0,0);
-      const isStart = d.getTime() === s.getTime();
-      const isEnd = d.getTime() === e.getTime();
-      const posClass = isStart && isEnd ? '' : isStart ? 'bar-start' : isEnd ? 'bar-end' : 'bar-mid';
+    const barsHtml = deadlines.map(p => {
       const col = colorMap[p.color] || '#4d8fff';
-      const textCol = isLightColor(col) ? '#000' : '#fff';
-      const dayOfWeek = d.getDay();
-      const isRowStart = dayOfWeek === 0;
-      const borderLeft = isStart || isRowStart ? `border-left:3px solid ${col};` : 'border-left:none;';
-      const leftRadius = isStart || isRowStart ? '' : 'border-radius:0;';
-      return `<div class="cal-project-bar ${posClass}" style="background:${col}20;color:${col};${borderLeft}${leftRadius}" onclick="event.stopPropagation();openDetail(${p.id})" title="${p.name}"><span class="bar-label">${p.name}</span></div>`;
+      return `<div class="cal-project-bar" style="background:${col}25;color:${col};border-left:3px solid ${col}" onclick="event.stopPropagation();openDetail(${p.id})" title="${p.name}"><span class="bar-label">📅 ${p.name}</span></div>`;
     }).join('');
 
-    const dotHtml = deadlines.length > 0 ? deadlines.map(p => {
-      const col = colorMap[p.color] || '#4d8fff';
-      return `<div class="cal-deadline-dot" style="background:${col}" title="Deadline: ${p.name}"></div>`;
-    }).join('') : '';
+    const dotHtml = '';
 
     return `<div class="cal-cell${!isCur?' other-month':''}${isToday?' today':''}">
       <div class="cal-date">${cell.day}</div>
@@ -2646,9 +2670,10 @@ function renderCalendar() {
 
   // Legend
   const legend = document.getElementById('cal-legend');
-  legend.innerHTML = projsWithDates.map(p => {
+  legend.innerHTML = projects.filter(p => p.deadline).map(p => {
     const col = colorMap[p.color] || '#4d8fff';
-    return `<div class="cal-legend-item"><div class="cal-legend-dot" style="background:${col}"></div>${p.name}</div>`;
+    const dl = new Date(p.deadline).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    return `<div class="cal-legend-item"><div class="cal-legend-dot" style="background:${col}"></div>${p.name} <span style="color:var(--text3);font-size:10px">· ${dl}</span></div>`;
   }).join('');
 }
 
