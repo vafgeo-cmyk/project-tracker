@@ -2432,8 +2432,19 @@ function openDetail(id) {
 
     <div class="detail-section">
       <div class="detail-section-title">Notes</div>
-      <textarea class="notes-area admin-only" id="notes-${p.id}" onblur="saveNotes(${p.id})" placeholder="Add notes, updates, blockers…">${p.notes||''}</textarea>
-      <div class="viewer-notes" style="display:none;font-size:13px;color:var(--text2);background:var(--navy3);border-radius:8px;padding:12px;white-space:pre-wrap;min-height:60px">${p.notes||'<span style=\"color:var(--text3)\">No notes added</span>'}</div>
+      <div class="admin-only" style="display:flex;gap:8px;margin-bottom:10px">
+        <input id="note-input-${p.id}" type="text" class="form-input" placeholder="Add a note and press Enter…" style="flex:1;font-size:13px;padding:8px 12px"
+          onkeydown="if(event.key==='Enter'&&this.value.trim()){addTimestampedNote(${p.id},this.value.trim());this.value='';event.preventDefault();}">
+        <button class="btn btn-ghost btn-sm" onclick="const el=document.getElementById('note-input-${p.id}');if(el.value.trim()){addTimestampedNote(${p.id},el.value.trim());el.value='';}">Add</button>
+      </div>
+      <div id="notes-log-${p.id}" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto">
+        ${(p.noteEntries||[]).slice().reverse().map(n => `
+          <div style="background:var(--navy3);border:1px solid var(--border);border-radius:6px;padding:8px 12px;display:flex;flex-direction:column;gap:3px">
+            <span style="font-size:11px;color:var(--text3)">${n.ts}</span>
+            <span style="font-size:13px;color:var(--text2);line-height:1.5">${n.text}</span>
+          </div>`).join('')}
+        ${!(p.noteEntries && p.noteEntries.length) ? '<div style="font-size:13px;color:var(--text3);padding:8px 0">No notes yet — type above and press Enter.</div>' : ''}
+      </div>
     </div>
 
     <div class="detail-section">
@@ -2538,8 +2549,31 @@ function addTask(projId) {
 
 function saveNotes(projId) {
   const p = projects.find(x => x.id === projId);
-  p.notes = document.getElementById(`notes-${projId}`).value;
+  if (!p) return;
   updateSidebarStats();
+}
+
+function addTimestampedNote(projId, text) {
+  const p = projects.find(x => x.id === projId);
+  if (!p) return;
+  if (!p.noteEntries) p.noteEntries = [];
+  const now = new Date();
+  const ts = now.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'}) + ' · ' +
+             now.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+  p.noteEntries.unshift({ ts, text });
+  // Also keep a legacy notes string for backward compat
+  p.notes = p.noteEntries.map(n => `[${n.ts}] ${n.text}`).join('\n');
+  // Re-render the notes log in place without closing detail
+  const log = document.getElementById(`notes-log-${projId}`);
+  if (log) {
+    log.innerHTML = p.noteEntries.map(n => `
+      <div style="background:var(--navy3);border:1px solid var(--border);border-radius:6px;padding:8px 12px;display:flex;flex-direction:column;gap:3px">
+        <span style="font-size:11px;color:var(--text3)">${n.ts}</span>
+        <span style="font-size:13px;color:var(--text2);line-height:1.5">${n.text}</span>
+      </div>`).join('');
+  }
+  saveAndRender();
+  showToast('📝 Note added');
 }
 
 // ── Toast ──
@@ -3050,8 +3084,7 @@ const _origSaveNotes = saveNotes;
 saveNotes = function(projId) {
   if (!isAdmin) { showToast('🔒 Admin login required'); showLoginModal(); return; }
   const p = projects.find(x => x.id === projId);
-  const el = document.getElementById(`notes-${projId}`);
-  if (el) { p.notes = el.value; saveToStorage(); updateSidebarStats(); }
+  if (p) { saveToStorage(); updateSidebarStats(); }
 };
 
 // ── Migration helper (reusable) ──
@@ -3061,6 +3094,14 @@ function migrationFixes() {
     if (!p.status) p.status = 'not-started';
     if (!p.owners) p.owners = p.owner ? [p.owner] : [];
     if (!p.tasks) p.tasks = [];
+    if (!p.noteEntries) {
+      // Migrate old plain notes string into noteEntries
+      if (p.notes && p.notes.trim()) {
+        p.noteEntries = [{ ts: 'Imported', text: p.notes.trim() }];
+      } else {
+        p.noteEntries = [];
+      }
+    }
   });
 }
 
@@ -3071,6 +3112,7 @@ window.closeModal = closeModal;
 window.handleModalClick = handleModalClick;
 window.saveProject = saveProject;
 window.archiveProject = archiveProject;
+window.addTimestampedNote = addTimestampedNote;
 window.unarchiveProject = unarchiveProject;
 window.deleteProject = deleteProject;
 window.openDetail = openDetail;
