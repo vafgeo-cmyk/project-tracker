@@ -1259,6 +1259,28 @@
   @media (max-width: 640px) {
     .mobile-search { display: block; }
   }
+
+  /* ── Time Tracking ── */
+  .timer-btn { display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:transparent;color:var(--text2);transition:all 0.2s;letter-spacing:0.3px; }
+  .timer-btn:hover { border-color:var(--green);color:var(--green); }
+  .timer-btn.running { background:rgba(34,197,94,0.12);border-color:var(--green);color:var(--green);animation:timerPulse 2s infinite; }
+  .timer-btn.running:hover { background:rgba(239,68,68,0.12);border-color:var(--red);color:var(--red); }
+  .timer-btn.running:hover .timer-btn-icon::before { content:"⏹"; }
+  .timer-btn.running:hover .timer-btn-label { display:none; }
+  .timer-btn.running:hover::after { content:" Stop"; }
+  @keyframes timerPulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+  .timer-display { font-variant-numeric:tabular-nums;font-family:monospace;font-size:13px; }
+  .time-log-entry { background:var(--navy3);border:1px solid var(--border);border-radius:6px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px; }
+  .time-log-entry .tl-date { font-size:11px;color:var(--text3); }
+  .time-log-entry .tl-dur { font-size:13px;color:var(--green);font-weight:600;font-family:monospace; }
+  .tracking-card { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:12px; }
+  .tracking-card-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:12px; }
+  .tracking-card-name { font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:var(--text); }
+  .tracking-total { font-size:22px;font-weight:800;color:var(--green);font-family:monospace; }
+  .tracking-sessions { display:flex;flex-direction:column;gap:6px;margin-top:10px; }
+  .live-badge { display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--green);font-weight:600; }
+  .live-dot { width:7px;height:7px;border-radius:50%;background:var(--green);animation:timerPulse 1.2s infinite; }
+
 </style>
 </head>
 <body>
@@ -1322,6 +1344,10 @@
     <div class="nav-item" id="snav-archive" onclick="showArchiveView()">
       <span class="nav-icon">🗂️</span>
       <span>Archive <span id="archive-count" style="font-size:10px;background:rgba(138,163,189,0.15);color:var(--text3);padding:1px 6px;border-radius:10px;margin-left:2px">0</span></span>
+    </div>
+    <div class="nav-item" id="snav-tracking" onclick="showTrackingView()">
+      <span class="nav-icon">⏱️</span>
+      <span>Time Tracking</span>
     </div>
 
     <div class="sidebar-label" style="margin-top:8px">Filter By Status</div>
@@ -1502,6 +1528,9 @@
       <div id="view-archive" class="hidden">
         <div id="archive-content"></div>
       </div>
+      <div id="view-tracking" class="hidden">
+        <div id="tracking-content"></div>
+      </div>
 
     </div>
   </main>
@@ -1591,9 +1620,14 @@
     <div class="detail-header">
       <div class="detail-title" id="d-title" title="Double-click to rename" ondblclick="inlineRenameProject()" style="cursor:text">Project Name</div>
       <div class="detail-close" onclick="closeDetail()">✕</div>
-      <div style="display:flex;gap:8px;margin-top:10px">
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
         <span class="badge" id="d-status-badge"></span>
         <span class="badge" id="d-priority-badge"></span>
+        <button class="timer-btn admin-only" id="d-timer-btn" onclick="toggleTimer()">
+          <span class="timer-btn-icon" id="d-timer-icon">▶</span>
+          <span class="timer-btn-label" id="d-timer-label">Start</span>
+          <span class="timer-display" id="d-timer-display" style="display:none"></span>
+        </button>
       </div>
     </div>
     <div class="detail-body" id="detail-body"></div>
@@ -2243,11 +2277,12 @@ function switchView(view) {
   document.getElementById('view-weekly').classList.toggle('hidden', view !== 'weekly');
   document.getElementById('view-calendar').classList.toggle('hidden', view !== 'calendar');
   document.getElementById('view-archive').classList.toggle('hidden', view !== 'archive');
+  document.getElementById('view-tracking').classList.toggle('hidden', view !== 'tracking');
   document.getElementById('tab-table').classList.toggle('active', view === 'table');
   document.getElementById('tab-grid').classList.toggle('active', view === 'grid');
   document.getElementById('tab-calendar').classList.toggle('active', view === 'calendar');
   // Update sidebar nav highlight
-  const navMap = { table: 'snav-table', grid: 'snav-grid', calendar: 'snav-calendar', weekly: 'snav-weekly', archive: 'snav-archive' };
+  const navMap = { table: 'snav-table', grid: 'snav-grid', calendar: 'snav-calendar', weekly: 'snav-weekly', archive: 'snav-archive', tracking: 'snav-tracking' };
   if (navMap[view]) setSidebarNav(navMap[view]);
   if (view === 'calendar') {
     document.getElementById('page-title').textContent = 'Calendar';
@@ -2454,6 +2489,13 @@ function openDetail(id) {
           <div class="update-dot"></div>
           <div><div class="update-text">${u}</div></div>
         </div>`).join('')}
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Time Log</div>
+      <div id="time-log-${p.id}">
+        ${renderTimeLog(p)}
+      </div>
     </div>
 
     <div style="display:flex;gap:8px;margin-top:16px">
@@ -3166,6 +3208,261 @@ async function boot() {
 }
 
 boot();
+
+// ══════════════════════════════════════════
+// TIME TRACKING
+// ══════════════════════════════════════════
+let activeTimerId = null;       // project id currently being tracked
+let timerStartTs = null;        // Date.now() when timer started
+let timerInterval = null;       // setInterval handle
+
+function fmtDuration(ms) {
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${String(m).padStart(2,'0')}m`;
+  if (m > 0) return `${m}m ${String(s).padStart(2,'0')}s`;
+  return `${s}s`;
+}
+
+function fmtDurationShort(ms) {
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  if (h > 0) return `${h}h ${String(m).padStart(2,'0')}m`;
+  return `${m}m`;
+}
+
+function totalTrackedMs(p) {
+  return (p.timeSessions || []).reduce((sum, s) => sum + (s.duration || 0), 0);
+}
+
+function renderTimeLog(p) {
+  const sessions = (p.timeSessions || []).slice().reverse();
+  if (!sessions.length) return '<div style="font-size:13px;color:var(--text3);padding:4px 0">No time tracked yet — click ▶ Start to begin.</div>';
+  const total = totalTrackedMs(p);
+  return `
+    <div style="margin-bottom:10px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:13px;color:var(--text3)">Total:</span>
+      <span style="font-size:18px;font-weight:800;color:var(--green);font-family:monospace">${fmtDurationShort(total)}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px;max-height:180px;overflow-y:auto">
+      ${sessions.map(s => `
+        <div class="time-log-entry">
+          <span class="tl-date">${s.date}</span>
+          <span class="tl-dur">${fmtDurationShort(s.duration)}</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+function updateTimerUI() {
+  const btn = document.getElementById('d-timer-btn');
+  const icon = document.getElementById('d-timer-icon');
+  const label = document.getElementById('d-timer-label');
+  const display = document.getElementById('d-timer-display');
+  if (!btn) return;
+
+  if (activeTimerId === currentDetailId) {
+    // This project is running
+    btn.classList.add('running');
+    icon.textContent = '⏹';
+    label.textContent = 'Stop';
+    display.style.display = 'inline';
+    const elapsed = Date.now() - timerStartTs;
+    display.textContent = ' · ' + fmtDuration(elapsed);
+  } else {
+    btn.classList.remove('running');
+    icon.textContent = '▶';
+    label.textContent = 'Start';
+    display.style.display = 'none';
+    display.textContent = '';
+  }
+}
+
+function stopCurrentTimer() {
+  if (activeTimerId === null) return;
+  clearInterval(timerInterval);
+  timerInterval = null;
+  const elapsed = Date.now() - timerStartTs;
+  if (elapsed > 5000) { // only record if > 5 seconds
+    const p = projects.find(x => x.id === activeTimerId);
+    if (p) {
+      if (!p.timeSessions) p.timeSessions = [];
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'}) +
+                      ' · ' + now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      p.timeSessions.push({ date: dateStr, duration: elapsed, ts: now.getTime() });
+      p.updates = [...(p.updates||[]), `Time logged: ${fmtDurationShort(elapsed)}`];
+      saveAndRender();
+      // Refresh time log in detail panel if open
+      const logEl = document.getElementById(`time-log-${p.id}`);
+      if (logEl) logEl.innerHTML = renderTimeLog(p);
+    }
+  }
+  activeTimerId = null;
+  timerStartTs = null;
+}
+
+function toggleTimer() {
+  if (!isAdmin) { showToast('🔒 Admin login required'); showLoginModal(); return; }
+  if (activeTimerId === currentDetailId) {
+    // Stop
+    stopCurrentTimer();
+    updateTimerUI();
+    showToast('⏹ Timer stopped');
+  } else {
+    // Stop any other running timer first
+    if (activeTimerId !== null) {
+      stopCurrentTimer();
+    }
+    // Start for this project
+    activeTimerId = currentDetailId;
+    timerStartTs = Date.now();
+    timerInterval = setInterval(() => { updateTimerUI(); }, 1000);
+    updateTimerUI();
+    showToast('▶ Timer started');
+  }
+}
+
+// ── Time Tracking View ──
+let trackingFilter = 'all'; // 'all' | 'week' | 'month'
+
+function showTrackingView() {
+  currentView = 'tracking';
+  document.getElementById('view-table').classList.add('hidden');
+  document.getElementById('view-grid').classList.add('hidden');
+  document.getElementById('view-calendar').classList.add('hidden');
+  document.getElementById('view-weekly').classList.add('hidden');
+  document.getElementById('view-archive').classList.add('hidden');
+  document.getElementById('view-tracking').classList.remove('hidden');
+  setSidebarNav('snav-tracking');
+  setMobileNav('tracking');
+  document.getElementById('page-title').textContent = 'Time Tracking';
+  renderTrackingView();
+}
+
+function filterSessionsByPeriod(sessions, period) {
+  if (period === 'all') return sessions;
+  const now = new Date();
+  return sessions.filter(s => {
+    const d = new Date(s.ts);
+    if (period === 'week') {
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay());
+      startOfWeek.setHours(0,0,0,0);
+      return d >= startOfWeek;
+    }
+    if (period === 'month') {
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }
+    return true;
+  });
+}
+
+function renderTrackingView() {
+  const content = document.getElementById('tracking-content');
+  if (!content) return;
+
+  const trackedProjects = projects.filter(p => p.timeSessions && p.timeSessions.length > 0);
+  const grandTotal = trackedProjects.reduce((sum, p) => {
+    const filtered = filterSessionsByPeriod(p.timeSessions, trackingFilter);
+    return sum + filtered.reduce((s, sess) => s + (sess.duration||0), 0);
+  }, 0);
+
+  const filterBtnStyle = (f) => `padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid;transition:all 0.2s;` +
+    (trackingFilter === f ? 'background:var(--blue);border-color:var(--blue);color:#fff;' : 'background:transparent;border-color:var(--border);color:var(--text3);');
+
+  content.innerHTML = `
+    <div style="padding:24px 0 8px">
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--text)">Time Tracking</div>
+          <div style="font-size:13px;color:var(--text3);margin-top:4px">${trackedProjects.length} project${trackedProjects.length !== 1 ? 's' : ''} tracked</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+          <div style="text-align:right">
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px">Total Time</div>
+            <div style="font-size:28px;font-weight:800;color:var(--green);font-family:monospace;line-height:1.1">${fmtDurationShort(grandTotal) || '0m'}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active timer banner -->
+      ${activeTimerId !== null ? `
+        <div style="background:rgba(34,197,94,0.1);border:1px solid var(--green);border-radius:10px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px">
+          <span class="live-dot"></span>
+          <span style="font-size:13px;color:var(--green);font-weight:600">Tracking: <span style="color:var(--text)">${projects.find(x=>x.id===activeTimerId)?.name || ''}</span></span>
+          <span class="timer-display" id="tracking-live-display" style="color:var(--green);font-size:13px"></span>
+          <button onclick="stopCurrentTimer();updateTimerUI();renderTrackingView();showToast('⏹ Timer stopped')" style="margin-left:auto;padding:4px 12px;border-radius:12px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:12px;cursor:pointer">⏹ Stop</button>
+        </div>` : ''}
+
+      <!-- Filter pills -->
+      <div style="display:flex;gap:8px;margin-bottom:20px">
+        <button style="${filterBtnStyle('all')}" onclick="trackingFilter='all';renderTrackingView()">All Time</button>
+        <button style="${filterBtnStyle('week')}" onclick="trackingFilter='week';renderTrackingView()">This Week</button>
+        <button style="${filterBtnStyle('month')}" onclick="trackingFilter='month';renderTrackingView()">This Month</button>
+      </div>
+
+      <!-- Project cards -->
+      ${trackedProjects.length === 0 ? `
+        <div style="text-align:center;padding:60px 20px;color:var(--text3)">
+          <div style="font-size:40px;margin-bottom:12px">⏱️</div>
+          <div style="font-size:16px;font-weight:600;color:var(--text2)">No time tracked yet</div>
+          <div style="font-size:13px;margin-top:6px">Open any project and click ▶ Start to begin tracking</div>
+        </div>` :
+        trackedProjects.map(p => {
+          const filtered = filterSessionsByPeriod(p.timeSessions, trackingFilter);
+          if (!filtered.length) return '';
+          const total = filtered.reduce((s, sess) => s + (sess.duration||0), 0);
+          const col = colorMap[p.color] || '#4d8fff';
+          const isLive = activeTimerId === p.id;
+          return `
+            <div class="tracking-card" style="border-left:3px solid ${col}" onclick="openDetail(${p.id})">
+              <div class="tracking-card-header">
+                <div>
+                  <div class="tracking-card-name">${p.name}</div>
+                  ${isLive ? '<span class="live-badge"><span class="live-dot"></span> Tracking now</span>' : ''}
+                </div>
+                <div class="tracking-total">${fmtDurationShort(total)}</div>
+              </div>
+              <div class="tracking-sessions">
+                ${filtered.slice().reverse().slice(0,5).map(s => `
+                  <div class="time-log-entry">
+                    <span class="tl-date">${s.date}</span>
+                    <span class="tl-dur">${fmtDurationShort(s.duration)}</span>
+                  </div>`).join('')}
+                ${filtered.length > 5 ? `<div style="font-size:11px;color:var(--text3);text-align:center;padding:4px">+ ${filtered.length - 5} more sessions</div>` : ''}
+              </div>
+            </div>`;
+        }).join('')
+      }
+    </div>`;
+
+  // Update live timer display in tracking view
+  if (activeTimerId !== null) {
+    const liveEl = document.getElementById('tracking-live-display');
+    clearInterval(window._trackingLiveInterval);
+    window._trackingLiveInterval = setInterval(() => {
+      if (liveEl) liveEl.textContent = fmtDuration(Date.now() - timerStartTs);
+      else clearInterval(window._trackingLiveInterval);
+    }, 1000);
+  }
+}
+
+// Update openDetail to refresh timer UI
+const _origOpenDetail = openDetail;
+openDetail = function(id) {
+  _origOpenDetail(id);
+  updateTimerUI();
+};
+window.openDetail = openDetail;
+window.toggleTimer = toggleTimer;
+window.stopCurrentTimer = stopCurrentTimer;
+window.showTrackingView = showTrackingView;
+window.renderTrackingView = renderTrackingView;
+
 </script>
   <!-- ── Admin Login Modal ── -->
   <div class="auth-overlay" id="auth-overlay">
